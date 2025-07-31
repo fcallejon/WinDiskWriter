@@ -38,6 +38,11 @@
     return NSLocalizedString(@"ALERT_SUBTITLE_PRESS_UPDATE_BUTTON", NULL);
 }
 
++ (NSString *)errorTextPatchRegistryInvalidFile:(id)argument1 {
+    NSString *unformattedString = NSLocalizedString(@"ERROR_TEXT_PATCH_REGISTRY_INVALID_FILE", NULL);
+    return [NSString stringWithFormat: unformattedString, argument1];
+}
+
 + (NSString *)alertSubtitlePromptResetSettingsWithArgument1:(id)argument1 {
     NSString *unformattedString = NSLocalizedString(@"ALERT_SUBTITLE_PROMPT_RESET_SETTINGS", NULL);
     return [NSString stringWithFormat: unformattedString, argument1];

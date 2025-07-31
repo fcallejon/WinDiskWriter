@@ -29,6 +29,10 @@ extern NSString * const PARTITION_SCHEME_TYPE_GPT_TITLE;
 extern NSString * const FILESYSTEM_TYPE_FAT32_TITLE;
 extern NSString * const FILESYSTEM_TYPE_EXFAT_TITLE;
 
+/* Hivexsh commands */
+extern NSString * const HIVEXSH_BYPASS_TPM_CHECK_COMMANDS;
+
+/*  */
 @end
 
 #endif /* Constants_h */

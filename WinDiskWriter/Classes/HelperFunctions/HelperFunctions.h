@@ -65,6 +65,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (NSString *)unitFormattedSizeFor: (UInt64)bytes;
 
++ (BOOL) runCommand: (NSString *_Nonnull)command
+        workingPath: (NSString *_Nonnull)workingPath
+          arguments: (NSArray *_Nonnull)arguments
+              error: (NSError *_Nullable *_Nullable)error;
+
 @end
 
 NS_ASSUME_NONNULL_END

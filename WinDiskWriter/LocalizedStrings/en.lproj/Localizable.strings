@@ -342,6 +342,9 @@
 "ERROR_TEXT_SPLITTING_ESD_SWM_NOT_SUPPORTED" = "Splitting Windows Install Images with .esd and .swm extensions is currently not supported.";
 
 
+"ERROR_TEXT_PATCH_REGISTRY_INVALID_FILE" = "File %1s is not the expected boot.wim as it is invalid for registry patching";
+
+
 "ERROR_TEXT_UNMOUNT_DESTINATION_DEVICE_FAILURE" = "Can't unmount the destination device";
 
 

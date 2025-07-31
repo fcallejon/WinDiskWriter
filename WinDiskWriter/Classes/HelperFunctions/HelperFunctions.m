@@ -458,4 +458,37 @@ static void initializeStaticVariables() {
     ];
 }
 
++ (BOOL) runCommand: (NSString *_Nonnull)command
+        workingPath: (NSString *_Nonnull)workingPath
+          arguments: (NSArray *_Nonnull)arguments
+              error: (NSError *_Nullable *_Nullable)error {
+    
+    NSTask *task = [NSTask new];
+    [task setCurrentDirectoryPath:workingPath];
+    [task setArguments:arguments];
+    [task setLaunchPath:command];
+
+    NSPipe *pipe = [NSPipe pipe];
+    NSPipe *errPipe = [NSPipe pipe];
+    [task setStandardOutput:pipe];
+    [task setStandardError:errPipe];
+
+    [task launch];
+
+    [task waitUntilExit];
+    NSData *data = [[pipe fileHandleForReading] readDataToEndOfFile];
+    NSData *errors = [[errPipe fileHandleForReading] readDataToEndOfFile];
+    NSTaskTerminationReason exitReason = [task terminationReason];
+    
+    if (exitReason != NSTaskTerminationReasonExit || errors.length != 0) {
+        NSString *fromData = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+        NSString *both = [[[NSString alloc] initWithData:errors encoding:NSUTF8StringEncoding] stringByAppendingString:fromData];
+        NSLog (@"Ups! \n%@", both);
+        *error = [NSError errorWithStringValue: both];
+        return false;
+    }
+
+    return true;
+}
+
 @end

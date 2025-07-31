@@ -558,6 +558,73 @@ cleanup: {
     return operationWasSuccessful;
 }
 
+- (BOOL)patchRegistry: (DWFile *)dwFile
+                      destinationPath: (NSString *)destinationPath
+                             callback: (ChainedCallbackAction)callback {
+    
+    /*
+     Based on writeWindowsInstallWithDWFile
+     */
+    
+#define CallbackHandlerWithCleanup(dwFile, writtenBytes, operationType, operationResult, error)                 \
+switch (callback(dwFile, writtenBytes, operationType, operationResult, error)) {                                \
+case DWActionContinue:                                                                                          \
+break;                                                                                                          \
+case DWActionSkip:                                                                                              \
+case DWActionStop:                                                                                              \
+goto cleanup;                                                                                                   \
+}
+
+//
+    NSString *sourcePath = [self.filesContainer.containerPath stringByAppendingPathComponent:dwFile.sourcePath];
+    
+    BOOL operationWasSuccessful = NO;
+    __block DWAction latestAction = DWActionContinue;
+    
+    if (self.patchInstallerRequirements) {
+        
+        
+        if ([sourcePath.lastPathComponent.lowercaseString isNotEqualTo:@"boot.wim"]) {
+            NSError *error = [NSError errorWithStringValue: [LocalizedStrings errorTextPatchRegistryInvalidFile:sourcePath]];
+            
+            CallbackHandlerWithCleanup(dwFile, 0, DWOperationTypePatchWindowsInstallerRequirements, DWOperationResultFailure, error);
+            
+            goto cleanup;
+        }
+        
+        CallbackHandlerWithCleanup(dwFile, 0, DWOperationTypePatchWindowsInstallerRequirements, DWOperationResultStart, NULL);
+        
+        NSError *copyError;
+        BOOL copied = [localFileManager copyItemAtPath:sourcePath toPath:destinationPath error:&copyError];
+        if (!copied) {
+            goto cleanup;
+        }
+        
+        WimlibWrapper *wimlibWrapper = [[WimlibWrapper alloc] initWithWimPath: destinationPath];
+        
+        WimlibWrapperResult installerRequirementsPatchResult = [wimlibWrapper patchWindowsRegistryChecks];
+        
+        DWOperationResult operationResult;
+        switch (installerRequirementsPatchResult) {
+            case WimlibWrapperResultSuccess:
+                operationResult = DWOperationResultSuccess;
+                break;
+            case WimlibWrapperResultSkipped:
+                operationResult = DWOperationResultSkipped;
+                break;
+            case WimlibWrapperResultFailure:
+                operationResult = DWOperationResultFailure;
+        }
+        
+        CallbackHandlerWithCleanup(dwFile, 0, DWOperationTypePatchWindowsInstallerRequirements, operationResult, NULL);
+    }
+    
+    operationWasSuccessful = YES;
+    
+cleanup:
+    return operationWasSuccessful;
+}
+
 - (BOOL)startWritingWithError: (NSError **)error
              progressCallback: (ChainedCallbackAction)progressCallback {
     
@@ -610,6 +677,29 @@ if (![self commonErrorCheckerWithError:error]) {
                 [self writeWindowsInstallWithDWFile: currentFile
                                     destinationPath: absoluteDestinationPath
                                            callback: ^DWAction(DWFile * _Nonnull dwFile, uint64 copiedBytes, DWOperationType operationType, DWOperationResult operationResult, NSError * _Nonnull error) {
+                    
+                    lastAction = progressCallback(dwFile, copiedBytes, operationType, operationResult, error);
+                    
+                    return lastAction;
+                }];
+                
+                if (lastAction == DWActionStop) {
+                    return NO;
+                }
+                
+                continue;
+            }
+            
+            // [Detected file type: Windows Boot Image]
+            if ([lastPathComponent hasOneOfTheSuffixes:@[@"boot.wim"]]) {
+                // We save the location of the Windows Install Image file for possible extraction of the EFI bootloader from it (if initially absent)
+                installerWIMPackageFile = currentFile;
+                
+                __block DWAction lastAction = DWActionContinue;
+                
+                [self patchRegistry:currentFile
+                      destinationPath:absoluteDestinationPath
+                      callback: ^DWAction(DWFile * _Nonnull dwFile, uint64 copiedBytes, DWOperationType operationType, DWOperationResult operationResult, NSError * _Nonnull error) {
                     
                     lastAction = progressCallback(dwFile, copiedBytes, operationType, operationResult, error);
                     

@@ -64,9 +64,13 @@ typedef NS_ENUM(NSInteger, WimLibWrapperCPUArch) {
 destinationDirectory: (NSString *)destinationDirectory
       fromImageIndex: (UInt32)imageIndex;
 
+- (WimlibWrapperResult)removeChecks;
+
 - (WimlibWrapperResult)extractWindowsEFIBootloaderForDestinationDirectory: (NSString *)destinationDirectory;
 
 - (WimlibWrapperResult)patchWindowsRequirementsChecks;
+
+- (WimlibWrapperResult)patchWindowsRegistryChecks;
 
 typedef BOOL (^WimLibWrapperSplitImageCallback)(uint32_t totalPartsCount, uint32 currentPartNumber, uint64 bytesWritten, uint64 bytesTotal);
 

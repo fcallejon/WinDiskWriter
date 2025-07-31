@@ -354,6 +354,9 @@ NS_ASSUME_NONNULL_BEGIN
 /// @brief Splitting Windows Install Images with .esd and .swm extensions is currently not supported.
 + (NSString *)errorTextSplittingEsdSwmNotSupported;
 
+/// @brief File %1s is not the expected boot.wim as it is invalid for registry patching.
++ (NSString *)errorTextPatchRegistryInvalidFile:(id)argument1;
+
 /// @brief Can't unmount the destination device
 + (NSString *)errorTextUnmountDestinationDeviceFailure;
 

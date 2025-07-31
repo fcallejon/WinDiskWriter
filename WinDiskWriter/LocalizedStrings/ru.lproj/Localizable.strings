@@ -342,6 +342,9 @@
 "ERROR_TEXT_SPLITTING_ESD_SWM_NOT_SUPPORTED" = "Разделение установочных файлов Windows с расширениями .esd и .swm на данный момент недоступно.";
 
 
+"ERROR_TEXT_PATCH_REGISTRY_INVALID_FILE" = "File %1s is not the expected boot.wim as it is invalid for registry patching";
+
+
 "ERROR_TEXT_UNMOUNT_DESTINATION_DEVICE_FAILURE" = "Не удалось размонтировать устройство назначения.";
 
 /*  */

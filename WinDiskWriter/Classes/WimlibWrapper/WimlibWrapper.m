@@ -9,6 +9,8 @@
 #import "WimlibWrapper.h"
 #import "CChar2DArray.h"
 #import "WimlibSplitInfo.h"
+#import "HelperFunctions.h"
+#import "Constants.h"
 #import "wimlib.h"
 #import "wim.h"
 #import "xml.h"
@@ -294,6 +296,95 @@ destinationDirectory: (NSString *)destinationDirectory
     BOOL applyChangesResult = [self applyChanges];
     
     return applyChangesResult ? WimlibWrapperResultSuccess : WimlibWrapperResultFailure;
+}
+
+- (WimlibWrapperResult)patchWindowsRegistryChecks {
+    if (currentWIM == NULL) {
+        return WimlibWrapperResultFailure;
+    }
+    
+    NSURL *fileURL = [NSURL fileURLWithPath:_wimPath];
+    NSURL *containingDirectory = [fileURL URLByDeletingLastPathComponent];
+    NSError *directoryCreateError = NULL;
+    NSFileManager *localFileManager = [NSFileManager defaultManager];
+    NSString *randomFolderName = [NSString stringWithFormat:@"bi-%@", [HelperFunctions randomStringWithLength:10]];
+    NSString *tempDirectory = [containingDirectory.path stringByAppendingPathComponent: randomFolderName];
+    BOOL directoryCreatedSuccessfully = [localFileManager createDirectoryAtPath: tempDirectory
+                                                    withIntermediateDirectories: YES
+                                                                     attributes: NULL
+                                                                          error: &directoryCreateError];
+    
+    if (!directoryCreatedSuccessfully) {
+        return WimlibWrapperResultFailure;
+    }
+    NSArray *registryFiles = [NSArray arrayWithObjects:@"/Windows/System32/config/SYSTEM", nil ];
+    
+    BOOL extracted = [self extractFiles:registryFiles destinationDirectory:tempDirectory fromImageIndex:1];
+    if (!extracted) {
+        return WimlibWrapperResultFailure;
+    }
+    NSString *disableCommandsFilePath = [tempDirectory stringByAppendingPathComponent:@"disable.tpm.commands"];
+
+    NSError *error;
+    [HIVEXSH_BYPASS_TPM_CHECK_COMMANDS writeToFile:disableCommandsFilePath atomically:YES encoding:NSUTF8StringEncoding error:&error];
+    NSString *systemRegistryFile = [tempDirectory stringByAppendingPathComponent:@"SYSTEM"];
+    
+    NSArray *argumenst = [NSArray arrayWithObjects:@"-w", @"-f", disableCommandsFilePath, systemRegistryFile, nil ];
+    NSError *hivexshErrors;
+    BOOL updated = [HelperFunctions runCommand:@"/opt/homebrew/bin/hivexsh" workingPath:tempDirectory arguments:argumenst error:&hivexshErrors];
+    
+    if (!updated) {
+        NSLog([NSString stringWithFormat:@"Failed to run hivexsh on boot index 1: %@", hivexshErrors]);
+        return WimlibWrapperResultFailure;
+    }
+    struct wimlib_add_command addCommand = {0};
+    addCommand.fs_source_path = (const tchar *) [systemRegistryFile cString];
+    addCommand.wim_target_path = [@"/Windows/System32/config/SYSTEM" cString];
+    
+    struct wimlib_update_command update_cmd = {0};
+    update_cmd.op = WIMLIB_UPDATE_OP_ADD;
+    update_cmd.add = addCommand;
+    
+    int res = wimlib_update_image(currentWIM, 1, &update_cmd, 1, NULL);
+    
+    if (res != 0) {
+        const tchar *rawUpdateError = wimlib_get_error_string(res);
+        NSString *updateError = [[NSString alloc] initWithCString:rawUpdateError];
+        NSLog(@"%@", updateError);
+        return WimlibWrapperResultFailure;
+    }
+    
+    extracted = [self extractFiles:registryFiles destinationDirectory:tempDirectory fromImageIndex:2];
+    if (!extracted) {
+        return WimlibWrapperResultFailure;
+    }
+
+    updated = [HelperFunctions runCommand:@"/opt/homebrew/bin/hivexsh" workingPath:tempDirectory arguments:argumenst error:&hivexshErrors];
+    
+    if (!updated) {
+        NSLog([NSString stringWithFormat:@"Failed to run hivexsh on boot index 2: %@", hivexshErrors]);
+        return WimlibWrapperResultFailure;
+    }
+    res = wimlib_update_image(currentWIM, 1, &update_cmd, 1, NULL);
+   
+    if (res != 0) {
+        const tchar *rawUpdateError = wimlib_get_error_string(res);
+        NSString *updateError = [[NSString alloc] initWithCString:rawUpdateError];
+        NSLog(@"%@", updateError);
+        return WimlibWrapperResultFailure;
+    }
+    
+    BOOL applyChangesResult = [self applyChanges];
+    
+    return applyChangesResult ? WimlibWrapperResultSuccess : WimlibWrapperResultFailure;
+}
+
+- (WimlibWrapperResult)removeChecks {
+    if (currentWIM == NULL) {
+        return WimlibWrapperResultFailure;
+    }
+    
+    
 }
 
 - (void)dealloc {

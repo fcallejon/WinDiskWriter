@@ -44,5 +44,27 @@ NSString * const PARTITION_SCHEME_TYPE_GPT_TITLE = @"GPT";
 NSString * const FILESYSTEM_TYPE_FAT32_TITLE = @"FAT32";
 NSString * const FILESYSTEM_TYPE_EXFAT_TITLE = @"ExFAT";
 
+NSString * const HIVEXSH_BYPASS_TPM_CHECK_COMMANDS =
+@"add LabConfig\n"
+"cd LabConfig\n"
+"add BypassTPMCheck\n"
+"add BypassSecureBootCheck\n"
+"add BypassRAMCheck\n"
+"add BypassStorageCheck\n"
+"add BypassCPUCheck\n"
+"setval 5\n"
+"BypassTPMCheck\n"
+"dword:0x00000001\n"
+"BypassSecureBootCheck\n"
+"dword:0x00000001\n"
+"BypassRAMCheck\n"
+"dword:0x00000001\n"
+"BypassStorageCheck\n"
+"dword:0x00000001\n"
+"BypassCPUCheck\n"
+"dword:0x00000001\n"
+"commit\n"
+"quit";
+
 
 @end
